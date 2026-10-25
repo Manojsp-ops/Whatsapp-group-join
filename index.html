@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PSG Tech</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    button, a {
+      display: inline-block;
+      margin: 8px 4px;
+      padding: 12px;
+      background: #087f8c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #result { margin-top: 20px; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h2>Batch (2024-28)</h2>
+  <p>
+    Join the offical watsapp group
+  </p>
+
+  <button id="locate">Allow and show my location</button>
+  <div id="result" aria-live="polite"></div>
+
+  <script>
+    document.getElementById("locate").onclick = () => {
+      const result = document.getElementById("result");
+      if (!navigator.geolocation) {
+        result.textContent = "Location is not supported by this browser.";
+        return;
+      }
+      result.textContent = "Waiting for your permission...";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          result.replaceChildren();
+
+          const coords = document.createElement("p");
+          coords.textContent =
+            `Latitude: ${lat}, Longitude: ${lon}`;
+          result.appendChild(coords);
+
+          const map = document.createElement("a");
+          map.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+          map.target = "_blank";
+          map.rel = "noopener noreferrer";
+          map.textContent = "View my location on map";
+          result.appendChild(map);
+
+          const share = document.createElement("button");
+          share.textContent = "Share coordinates";
+          share.onclick = async () => {
+            const text = `My location: ${lat}, ${lon}\n${map.href}`;
+            if (navigator.share) {
+              try { await navigator.share({ title: "My location", text, url: map.href }); }
+              catch (e) { /* Sharing cancelled */ }
+            } else {
+              try {
+                await navigator.clipboard.writeText(text);
+                share.textContent = "Copied! Paste into your message.";
+              } catch (e) {
+                result.append(" Copy this: " + text);
+              }
+            }
+          };
+          result.appendChild(share);
+        },
+        () => {
+          result.textContent =
+            "Location unavailable or permission denied. Please check browser permissions.";
+        }
+      );
+    };
+  </script>
+</body>
+</html>
