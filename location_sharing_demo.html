@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consent-Based Location Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 680px; margin: 32px auto; padding: 0 16px; line-height: 1.5; color: #17202a; }
+    main { border: 1px solid #d8dee4; border-radius: 16px; padding: 22px; }
+    button, a.button { display: inline-block; border: 0; border-radius: 9px; padding: 12px 16px; margin: 6px 6px 6px 0; font-size: 16px; cursor: pointer; background: #175cd3; color: white; text-decoration: none; }
+    button.secondary { background: #eef2f6; color: #17202a; }
+    #result { margin-top: 16px; padding: 14px; background: #f6f8fa; border-radius: 10px; overflow-wrap: anywhere; }
+    .muted { color: #596579; font-size: 14px; }
+    iframe { width: 100%; height: 300px; border: 0; border-radius: 10px; margin-top: 12px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Location Sharing Demo</h1>
+    <p>This educational page can show your device's location only after you choose to allow it in your browser. Your location is not automatically sent to the page creator.</p>
+    <button id="locate">Allow and show my location</button>
+    <button id="clear" class="secondary">Clear location</button>
+    <div id="result" role="status" aria-live="polite">No location has been requested yet.</div>
+    <div id="mapArea" hidden>
+      <a id="mapLink" class="button" target="_blank" rel="noopener noreferrer">Open location on OpenStreetMap</a>
+      <button id="share" class="secondary">Share coordinates</button>
+      <iframe id="map" title="Map showing the location" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    </div>
+    <p class="muted">For best results, open this page over HTTPS and enable Location Services. Accuracy depends on the device and available signals. You can deny permission at any time.</p>
+  </main>
+<script>
+  const locateButton = document.getElementById('locate');
+  const clearButton = document.getElementById('clear');
+  const result = document.getElementById('result');
+  const mapArea = document.getElementById('mapArea');
+  const mapLink = document.getElementById('mapLink');
+  const map = document.getElementById('map');
+  const shareButton = document.getElementById('share');
+  let coordinatesText = '';
+
+  locateButton.addEventListener('click', () => {
+    if (!('geolocation' in navigator)) {
+      result.textContent = 'This browser does not support location sharing.';
+      return;
+    }
+    result.textContent = 'Waiting for your permission and device location…';
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy);
+        coordinatesText = `Latitude: ${lat}\nLongitude: ${lon}\nEstimated accuracy: about ${accuracy} metres`;
+        result.textContent = coordinatesText;
+        const bbox = `${lon - 0.01}%2C${lat - 0.01}%2C${lon + 0.01}%2C${lat + 0.01}`;
+        mapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+        map.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
+        mapArea.hidden = false;
+      },
+      (error) => {
+        const messages = {
+          1: 'Permission was denied. You can allow location in your browser settings and try again.',
+          2: 'The device could not determine its location. Check Location Services and try again.',
+          3: 'The location request timed out. Please try again.'
+        };
+        result.textContent = messages[error.code] || 'Could not get the location.';
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
+
+  clearButton.addEventListener('click', () => {
+    coordinatesText = '';
+    result.textContent = 'Location cleared from this page.';
+    mapArea.hidden = true;
+    map.removeAttribute('src');
+    mapLink.removeAttribute('href');
+  });
+
+  shareButton.addEventListener('click', async () => {
+    if (!coordinatesText) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'My shared location', text: coordinatesText });
+      } catch (e) { /* User may cancel sharing. */ }
+    } else if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(coordinatesText);
+        result.textContent = coordinatesText + '\n\nCoordinates copied. Paste them into a message to share.';
+      } catch (e) {
+        result.textContent = coordinatesText + '\n\nPlease copy these coordinates manually to share.';
+      }
+    } else {
+      result.textContent = coordinatesText + '\n\nPlease copy these coordinates manually to share.';
+    }
+  });
+</script>
+</body>
+</html>
